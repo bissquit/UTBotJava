@@ -1,32 +1,69 @@
 plugins {
     id 'java-gradle-plugin'
+    id 'com.gradle.plugin-publish' version '0.18.0'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 apply from: "${parent.projectDir}/gradle/include/jvm-project.gradle"
 
 dependencies {
-    api project(":utbot-framework")
+    shadow gradleApi()
+    shadow localGroovy()
+
+    implementation project(":utbot-framework")
 
     implementation group: 'io.github.microutils', name: 'kotlin-logging', version: kotlin_logging_version
 }
 
+// needed to prevent inclusion of gradle-api into shadow JAR
+configurations.compile.dependencies.remove dependencies.gradleApi()
+
 configurations.all {
     exclude group: "org.apache.logging.log4j", module: "log4j-slf4j-impl"
+}
+
+jar {
+    manifest {
+        attributes 'JAR-Type': 'Fat JAR'
+        attributes 'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+}
+
+tasks.withType(GenerateModuleMetadata) {
+    enabled = false
+}
+
+publishing {
+    publications {
+        pluginPublication(MavenPublication) {
+            // should be empty
+        }
+    }
+    repositories {
+        maven {
+            url = layout.buildDirectory.dir('repo')
+        }
+    }
+}
+
+pluginBundle {
+    website = 'https://www.utbot.org/'
+    vcsUrl = 'https://github.com/UnitTestBot/UTBotJava/'
+    tags = ['java', 'unit-testing', 'tests-generation', 'sarif']
 }
 
 gradlePlugin {
     plugins {
         sarifReportPlugin {
             id = 'org.utbot.gradle.plugin'
+            version = '1.0.0'
+            displayName = 'UnitTestBot gradle plugin'
+            description = 'The gradle plugin for generating tests and creating SARIF reports based on UnitTestBot'
             implementationClass = 'org.utbot.gradle.plugin.SarifGradlePlugin'
-        }
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            url = layout.buildDirectory.dir('repo')
         }
     }
 }
