@@ -32,55 +32,7 @@ import org.utbot.engine.MockStrategy.NO_MOCKS
 import org.utbot.engine.overrides.UtArrayMock
 import org.utbot.engine.overrides.UtLogicMock
 import org.utbot.engine.overrides.UtOverrideMock
-import org.utbot.engine.pc.NotBoolExpression
-import org.utbot.engine.pc.UtAddNoOverflowExpression
-import org.utbot.engine.pc.UtAddrExpression
-import org.utbot.engine.pc.UtAndBoolExpression
-import org.utbot.engine.pc.UtArrayApplyForAll
-import org.utbot.engine.pc.UtArrayExpressionBase
-import org.utbot.engine.pc.UtArraySelectExpression
-import org.utbot.engine.pc.UtArraySetRange
-import org.utbot.engine.pc.UtArraySort
-import org.utbot.engine.pc.UtBoolExpression
-import org.utbot.engine.pc.UtBoolOpExpression
-import org.utbot.engine.pc.UtBvConst
-import org.utbot.engine.pc.UtBvLiteral
-import org.utbot.engine.pc.UtByteSort
-import org.utbot.engine.pc.UtCastExpression
-import org.utbot.engine.pc.UtCharSort
-import org.utbot.engine.pc.UtContextInitializer
-import org.utbot.engine.pc.UtExpression
-import org.utbot.engine.pc.UtFalse
-import org.utbot.engine.pc.UtInstanceOfExpression
-import org.utbot.engine.pc.UtIntSort
-import org.utbot.engine.pc.UtIsExpression
-import org.utbot.engine.pc.UtIteExpression
-import org.utbot.engine.pc.UtLongSort
-import org.utbot.engine.pc.UtMkTermArrayExpression
-import org.utbot.engine.pc.UtNegExpression
-import org.utbot.engine.pc.UtOrBoolExpression
-import org.utbot.engine.pc.UtPrimitiveSort
-import org.utbot.engine.pc.UtShortSort
-import org.utbot.engine.pc.UtSolver
-import org.utbot.engine.pc.UtSolverStatusSAT
-import org.utbot.engine.pc.UtSubNoOverflowExpression
-import org.utbot.engine.pc.UtTrue
-import org.utbot.engine.pc.addrEq
-import org.utbot.engine.pc.align
-import org.utbot.engine.pc.cast
-import org.utbot.engine.pc.findTheMostNestedAddr
-import org.utbot.engine.pc.isInteger
-import org.utbot.engine.pc.mkAnd
-import org.utbot.engine.pc.mkBVConst
-import org.utbot.engine.pc.mkBoolConst
-import org.utbot.engine.pc.mkChar
-import org.utbot.engine.pc.mkEq
-import org.utbot.engine.pc.mkFpConst
-import org.utbot.engine.pc.mkInt
-import org.utbot.engine.pc.mkNot
-import org.utbot.engine.pc.mkOr
-import org.utbot.engine.pc.select
-import org.utbot.engine.pc.store
+import org.utbot.engine.pc.*
 import org.utbot.engine.selectors.PathSelector
 import org.utbot.engine.selectors.StrategyOption
 import org.utbot.engine.selectors.coveredNewSelector
@@ -111,6 +63,7 @@ import org.utbot.engine.util.statics.concrete.makeEnumStaticFieldsUpdates
 import org.utbot.engine.util.statics.concrete.makeSymbolicValuesFromEnumConcreteValues
 import org.utbot.framework.PathSelectorType
 import org.utbot.framework.UtSettings
+import org.utbot.framework.UtSettings.checkNpeForFinalFields
 import org.utbot.framework.UtSettings.checkSolverTimeoutMillis
 import org.utbot.framework.UtSettings.enableFeatureProcess
 import org.utbot.framework.UtSettings.pathSelectorStepsLimit
@@ -1985,6 +1938,10 @@ class UtBotSymbolicEngine(
         is JInstanceFieldRef -> {
             val instance = (base.resolve() as ObjectValue)
             recordInstanceFieldRead(instance.addr, field)
+
+            // We know that [base] is not null as we are accessing its field (dot access).
+            // At the same time, we don't want to check for NPE if [base] is a final field
+            // (or if it is a non-nullable field).
             nullPointerExceptionCheck(instance.addr)
 
             val objectType = if (instance.concrete?.value is BaseOverriddenWrapper) {
@@ -2191,8 +2148,41 @@ class UtBotSymbolicEngine(
         val chunkId = hierarchy.chunkIdForField(objectType, field)
         val createdField = createField(objectType, addr, field.type, chunkId, mockInfoGenerator)
 
-        if (field.type is RefLikeType && field.shouldBeNotNull()) {
-            queuedSymbolicStateUpdates += mkNot(mkEq(createdField.addr, nullObjectAddr)).asHardConstraint()
+        if (field.type is RefLikeType) {
+            if (field.shouldBeNotNull()) {
+                queuedSymbolicStateUpdates += mkNot(mkEq(createdField.addr, nullObjectAddr)).asHardConstraint()
+            }
+
+            // We suppose that accessing final fields in system classes can't produce NullPointerException
+            // because they are properly initialized in corresponding constructors. It is therefore
+            // desirable to avoid the generation of redundant test cases for NPE branches.
+            //
+            // At the same time, we can't always add the "not null" hard constraint for the field: it would break
+            // some special cases like `Optional<T>` class, which uses the null value of its final field
+            // as a marker of an empty value.
+            //
+            // The engine checks for NPE and creates an NPE branch every time the address is used
+            // as a base of a dot call (i.e., a method call or a field access);
+            // see [UtBotSymbolicEngine.nullPointerExceptionCheck]). The problem is what at that moment, we would have
+            // no way to check whether the address corresponds to a final field, as the corresponding node
+            // of the global graph would refer to a local variable. The only place where we have the complete
+            // information about the field is this method.
+            //
+            // We use the following approach. If the field is final and belongs to a system class,
+            // we mark it as a speculatively non-nullable in the memory. During the NPE check
+            // we will add two constraints to the NPE branch: "address has not been speculatively marked
+            // as non-nullable", and "address is null".
+            //
+            // For final fields, this condition can't be satisfied, as we speculatively mark final fields
+            // as non-nullable here. As a result, the NPE branch would be discarded. If a field is not final,
+            // the condition is satisfiable, so the NPE branch would stay alive.
+            //
+            // We limit this approach to the system classes only, because it is hard to speculatively assume
+            // something about non-nullability of final fields in the user code.
+
+            if (field.isFinal && !field.declaringClass.isApplicationClass && !checkNpeForFinalFields) {
+                markAsSpeculativelyNotNull(createdField.addr)
+            }
         }
 
         return createdField
@@ -2360,6 +2350,10 @@ class UtBotSymbolicEngine(
 
     private fun touchAddress(addr: UtAddrExpression) {
         queuedSymbolicStateUpdates += MemoryUpdate(touchedAddresses = persistentListOf(addr))
+    }
+
+    private fun markAsSpeculativelyNotNull(addr: UtAddrExpression) {
+        queuedSymbolicStateUpdates += MemoryUpdate(speculativelyNotNullAddresses = persistentListOf(addr))
     }
 
     /**
@@ -3280,9 +3274,10 @@ class UtBotSymbolicEngine(
     private fun nullPointerExceptionCheck(addr: UtAddrExpression) {
         val canBeNull = addrEq(addr, nullObjectAddr)
         val canNotBeNull = mkNot(canBeNull)
+        val notFinalAndNull = mkAnd(mkEq(memory.isSpeculativelyNotNull(addr), mkFalse()), canBeNull)
 
         if (environment.method.checkForNPE(environment.state.executionStack.size)) {
-            implicitlyThrowException(NullPointerException(), setOf(canBeNull))
+            implicitlyThrowException(NullPointerException(), setOf(notFinalAndNull))
         }
 
         queuedSymbolicStateUpdates += canNotBeNull.asHardConstraint()
