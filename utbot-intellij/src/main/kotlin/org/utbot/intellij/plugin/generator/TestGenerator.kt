@@ -15,10 +15,6 @@ import org.utbot.framework.plugin.api.UtTestCase
 import org.utbot.intellij.plugin.sarif.SarifReportIdea
 import org.utbot.intellij.plugin.sarif.SourceFindingStrategyIdea
 import org.utbot.intellij.plugin.settings.Settings
-import org.utbot.intellij.plugin.ui.GenerateTestsModel
-import org.utbot.intellij.plugin.ui.SarifReportNotifier
-import org.utbot.intellij.plugin.ui.TestsReportNotifier
-import org.utbot.intellij.plugin.ui.packageName
 import org.utbot.intellij.plugin.ui.utils.getOrCreateSarifReportsPath
 import org.utbot.intellij.plugin.ui.utils.getOrCreateTestResourcesPath
 import org.utbot.sarif.SarifReport
@@ -63,6 +59,7 @@ import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.kotlin.psi.psiUtil.startOffset
 import org.jetbrains.kotlin.scripting.resolve.classId
 import org.utbot.intellij.plugin.error.showErrorDialogLater
+import org.utbot.intellij.plugin.ui.*
 
 object TestGenerator {
     fun generateTests(model: GenerateTestsModel, testCases: Map<PsiClass, List<UtTestCase>>) {
@@ -320,6 +317,14 @@ object TestGenerator {
         val notifyMessage = buildString {
             appendHtmlLine(testsCodeWithTestReport.testsGenerationReport.toString())
             appendHtmlLine()
+            if (model.forceMockingHappened) {
+                val warningMessage = """
+                    Warning: Some test cases were ignored, because no mocking framework is installed in the project.
+                    Better results could be achieved by <a href="${TestReportUrlOpeningListener.prefix}${TestReportUrlOpeningListener.mockitoSuffix}">installing mocking framework</a>, e.g. Mockito.
+                """.trimIndent()
+                appendHtmlLine(warningMessage)
+                appendHtmlLine()
+            }
             val classUnderTestPackageName = testsCodeWithTestReport.testsGenerationReport.classUnderTest.classId.packageFqName.toString()
             if (classUnderTestPackageName != model.testPackageName) {
                 val warningMessage = """
@@ -334,7 +339,7 @@ object TestGenerator {
             """.trimIndent()
             appendHtmlLine(savedFileMessage)
         }
-        TestsReportNotifier.notify(notifyMessage)
+        TestsReportNotifier.notify(notifyMessage, model.project, model.testModule)
     }
 
     @Suppress("unused")

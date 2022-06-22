@@ -1,11 +1,10 @@
 package org.utbot.intellij.plugin.ui
 
-import com.intellij.notification.NotificationDisplayType
-import com.intellij.notification.NotificationGroup
-import com.intellij.notification.NotificationListener
-import com.intellij.notification.NotificationType
+import com.intellij.notification.*
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
+import javax.swing.event.HyperlinkEvent
 
 abstract class Notifier {
     protected abstract val notificationType: NotificationType
@@ -65,6 +64,7 @@ object UnsupportedTestFrameworkNotifier : ErrorNotifier() {
 abstract class UrlNotifier : Notifier() {
 
     protected abstract val titleText: String
+    protected abstract val urlOpeningListener: NotificationListener
 
     override fun notify(info: String, project: Project?, module: Module?) {
         notificationGroup
@@ -72,7 +72,7 @@ abstract class UrlNotifier : Notifier() {
                 titleText,
                 content(project, module, info),
                 notificationType,
-                NotificationListener.UrlOpeningListener(false)
+                urlOpeningListener,
             ).notify(project)
     }
 }
@@ -87,6 +87,8 @@ object SarifReportNotifier : InformationUrlNotifier() {
 
     override val titleText: String = "" // no title
 
+    override val urlOpeningListener: NotificationListener = NotificationListener.UrlOpeningListener(false)
+
     override fun content(project: Project?, module: Module?, info: String): String = info
 }
 
@@ -95,5 +97,53 @@ object TestsReportNotifier : InformationUrlNotifier() {
 
     override val titleText: String = "Report of the unit tests generation via UtBot"
 
-    override fun content(project: Project?, module: Module?, info: String): String = info
+    override val urlOpeningListener: TestReportUrlOpeningListener = TestReportUrlOpeningListener()
+
+    override fun content(project: Project?, module: Module?, info: String): String {
+        // Remember last project and module to use them for configurations.
+        urlOpeningListener.project = project
+        urlOpeningListener.module = module
+        return info
+    }
+}
+
+/**
+ * Listener that handles URLs starting with [prefix], like "#utbot/configure-mockito".
+ *
+ * Current implementation
+ */
+class TestReportUrlOpeningListener: NotificationListener.Adapter() {
+    companion object {
+        const val prefix = "#utbot/"
+        const val mockitoSuffix = "configure-mockito"
+    }
+    private val defaultListener = NotificationListener.UrlOpeningListener(false)
+
+    // Last project and module to be able to use them when activated for configuration tasks.
+    var project: Project? = null
+    var module: Module? = null
+
+    override fun hyperlinkActivated(notification: Notification, e: HyperlinkEvent) {
+        val description = e.description
+        if (description.startsWith(prefix)) {
+            handleDescription(description.removePrefix(prefix))
+        }
+        else {
+            return defaultListener.hyperlinkUpdate(notification, e)
+        }
+    }
+
+    private fun handleDescription(descriptionSuffix: String) {
+        when {
+            descriptionSuffix.startsWith(mockitoSuffix) -> {
+                project?.let { module?.let {
+                        if (createMockFrameworkNotificationDialog("Configure mock framework") == Messages.YES) {
+                            configureMockFramework(project!!, module!!)
+                        }
+                    } ?: error("Could not configure mock framework: null in module ")
+                } ?: error("Could not configure mock framework: null in project ")
+            }
+            else -> error("No such command with #utbot prefix: $descriptionSuffix")
+        }
+    }
 }

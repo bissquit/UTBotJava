@@ -41,9 +41,6 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.projectRoots.JavaSdkVersion
-import com.intellij.openapi.roots.DependencyScope
-import com.intellij.openapi.roots.ExternalLibraryDescriptor
-import com.intellij.openapi.roots.JavaProjectModelModificationService
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ui.configuration.ClasspathEditor
 import com.intellij.openapi.roots.ui.configuration.ProjectStructureConfigurable
@@ -98,7 +95,6 @@ import java.nio.file.Paths
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 import kotlin.streams.toList
-import org.jetbrains.concurrency.Promise
 import javax.swing.*
 
 private const val RECENTS_KEY = "org.utbot.recents"
@@ -530,8 +526,8 @@ class GenerateTestsDialogWindow(val model: GenerateTestsModel) : DialogWrapper(m
         val frameworkNotInstalled =
             mockStrategies.item != MockStrategyApi.NO_MOCKS && !MOCKITO.isInstalled
 
-        if (frameworkNotInstalled && createMockFrameworkNotificationDialog() == Messages.YES) {
-            configureMockFramework()
+        if (frameworkNotInstalled && createMockFrameworkNotificationDialog(title) == Messages.YES) {
+            configureMockFramework(model.project, model.testModule)
         }
     }
 
@@ -558,20 +554,8 @@ class GenerateTestsDialogWindow(val model: GenerateTestsModel) : DialogWrapper(m
         }
 
         selectedTestFramework.isInstalled = true
-        addDependency(libraryDescriptor)
+        addDependency(model.project, model.testModule, libraryDescriptor)
             .onError { selectedTestFramework.isInstalled = false }
-    }
-
-    private fun configureMockFramework() {
-        val selectedMockFramework = MOCKITO
-
-        val libraryInProject =
-            findFrameworkLibrary(model.project, model.testModule, selectedMockFramework, LibrarySearchScope.Project)
-        val versionInProject = libraryInProject?.libraryName?.parseVersion()
-
-        selectedMockFramework.isInstalled = true
-        addDependency(mockitoCoreLibraryDescriptor(versionInProject))
-            .onError { selectedMockFramework.isInstalled = false }
     }
 
     private fun configureStaticMocking() {
@@ -602,30 +586,8 @@ class GenerateTestsDialogWindow(val model: GenerateTestsModel) : DialogWrapper(m
         }
     }
 
-    /**
-     * Adds the dependency for selected framework via [JavaProjectModelModificationService].
-     *
-     * Note that version restrictions will be applied only if they are present on target machine
-     * Otherwise latest release version will be installed.
-     */
-    private fun addDependency(libraryDescriptor: ExternalLibraryDescriptor): Promise<Void> {
-        return JavaProjectModelModificationService
-            .getInstance(model.project)
-            //this method returns JetBrains internal Promise that is difficult to deal with, but it is our way
-            .addDependency(model.testModule, libraryDescriptor, DependencyScope.TEST)
-    }
-
     private fun createTestFrameworkNotificationDialog() = Messages.showYesNoDialog(
         """Selected test framework ${testFrameworks.item.displayName} is not installed into current module. 
-            |Would you like to install it now?""".trimMargin(),
-        title,
-        "Yes",
-        "No",
-        Messages.getQuestionIcon(),
-    )
-
-    private fun createMockFrameworkNotificationDialog() = Messages.showYesNoDialog(
-        """Mock framework ${MOCKITO.displayName} is not installed into current module. 
             |Would you like to install it now?""".trimMargin(),
         title,
         "Yes",

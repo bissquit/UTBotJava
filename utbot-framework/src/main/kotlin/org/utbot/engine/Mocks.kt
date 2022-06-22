@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction5
 import kotlinx.collections.immutable.persistentListOf
+import org.utbot.engine.util.mockListeners.MockListenerController
 import soot.BooleanType
 import soot.RefType
 import soot.Scene
@@ -133,6 +134,7 @@ class Mocker(
     private val strategy: MockStrategy,
     private val classUnderTest: ClassId,
     private val hierarchy: Hierarchy,
+    internal val mockListenerController: MockListenerController,
     chosenClassesToMockAlways: Set<ClassId>
 ) {
     /**
@@ -164,6 +166,11 @@ class Mocker(
      * For others, if mock is not a new instance mock, asks mock strategy for decision.
      */
     fun shouldMock(
+        type: RefType,
+        mockInfo: UtMockInfo,
+    ): Boolean = doShouldMock(type, mockInfo).also { mockListenerController.onShouldMock(strategy, it) }
+
+    private fun doShouldMock(
         type: RefType,
         mockInfo: UtMockInfo
     ): Boolean {
