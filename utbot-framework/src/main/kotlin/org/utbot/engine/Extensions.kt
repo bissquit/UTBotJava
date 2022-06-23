@@ -203,7 +203,7 @@ val Type.numDimensions get() = if (this is ArrayType) numDimensions else 0
 /**
  * Invocation. Can generate multiple targets.
  *
- * @see UtBotSymbolicEngine.virtualAndInterfaceInvoke
+ * @see Traverser.virtualAndInterfaceInvoke
  */
 data class Invocation(
     val instance: ReferenceValue?,
@@ -222,7 +222,7 @@ data class Invocation(
 /**
  * Invocation target. Contains constraints to be satisfied for this instance class (related to virtual invoke).
  *
- * @see UtBotSymbolicEngine.virtualAndInterfaceInvoke
+ * @see Traverser.virtualAndInterfaceInvoke
  */
 data class InvocationTarget(
     val instance: ReferenceValue?,
@@ -245,11 +245,11 @@ data class MethodInvocationTarget(
 )
 
 /**
- * Used in the [UtBotSymbolicEngine.findLibraryTargets] to substitute common types
+ * Used in the [Traverser.findLibraryTargets] to substitute common types
  * like [Iterable] with the types that have corresponding wrappers.
  *
- * @see UtBotSymbolicEngine.findLibraryTargets
- * @see UtBotSymbolicEngine.findInvocationTargets
+ * @see Traverser.findLibraryTargets
+ * @see Traverser.findInvocationTargets
  */
 val libraryTargets: Map<String, List<String>> = mapOf(
     Iterable::class.java.name to listOf(ArrayList::class.java.name, HashSet::class.java.name),
