@@ -331,6 +331,11 @@ fun runEstimator(
         Predictors.stateRewardPredictor = NNStateRewardPredictorBase()
     }
 
+    logger.info { "PathSelectorType: ${UtSettings.pathSelectorType}" }
+    if (UtSettings.pathSelectorType == PathSelectorType.NN_REWARD_GUIDED_SELECTOR) {
+        logger.info { "RewardModelPath: ${UtSettings.rewardModelPath}" }
+    }
+
     EngineAnalyticsContext.featureProcessorFactory = FeatureProcessorWithStatesRepetitionFactory()
     EngineAnalyticsContext.featureExtractorFactory = FeatureExtractorFactoryImpl()
 
