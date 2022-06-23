@@ -1296,7 +1296,7 @@ class Traverser(
      * Returns null if mock is not allowed - Engine traverses nested method call or parameter type is not RefType.
      */
     private fun parameterMockInfoGenerator(parameterRef: IdentityRef): UtMockInfoGenerator? {
-        if (isInNestedMethod()) return null
+        if (environment.state.isInNestedMethod()) return null
         if (parameterRef !is ParameterRef) return null
         val type = parameterRef.type
         if (type !is RefType) return null
@@ -1508,7 +1508,7 @@ class Traverser(
     }
 
     private suspend fun FlowCollector<UtResult>.traverseThrowStmt(current: JThrowStmt) {
-        val symException = explicitThrown(resolve(current.op), isInNestedMethod())
+        val symException = explicitThrown(resolve(current.op), environment.state.isInNestedMethod())
         traverseException(current, symException)
     }
 
@@ -3515,7 +3515,7 @@ class Traverser(
     ) {
         if (environment.state.executionStack.last().doesntThrow) return
 
-        val symException = implicitThrown(exception, findNewAddr(), isInNestedMethod())
+        val symException = implicitThrown(exception, findNewAddr(), environment.state.isInNestedMethod())
         if (!traverseCatchBlock(environment.state.stmt, symException, conditions)) {
             environment.state.expectUndefined()
             val nextState = environment.state.createExceptionState(
@@ -3642,7 +3642,9 @@ class Traverser(
 
             workaround(REMOVE_ANONYMOUS_CLASSES) {
                 val sootClass = returnValue.type.sootClass
-                if (!isInNestedMethod() && (sootClass.isAnonymous || sootClass.isArtificialEntity)) return
+                if (!environment.state.isInNestedMethod() && (sootClass.isAnonymous || sootClass.isArtificialEntity)) {
+                    return
+                }
             }
         }
 
@@ -3663,7 +3665,7 @@ class Traverser(
         val updatedMemory = memory.update(queuedSymbolicStateUpdates.memoryUpdates)
 
         //no need to respect soft constraints in NestedMethod
-        val holder = newSolver.check(respectSoft = !isInNestedMethod())
+        val holder = newSolver.check(respectSoft = !environment.state.isInNestedMethod())
 
         if (holder !is UtSolverStatusSAT) {
             logger.trace { "processResult<${environment.method.signature}> UNSAT" }
@@ -3671,7 +3673,7 @@ class Traverser(
         }
 
         //execution frame from level 2 or above
-        if (isInNestedMethod()) {
+        if (environment.state.isInNestedMethod()) {
             // static fields substitution
             // TODO: JIRA:1610 -- better way of working with statics
             val updates = if (environment.method.name == STATIC_INITIALIZER && substituteStaticsWithSymbolicVariable) {
@@ -3767,8 +3769,6 @@ class Traverser(
             emitFailedConcreteExecutionResult(stateBefore, e)
         }
     }
-
-    internal fun isInNestedMethod() = environment.state.isInNestedMethod()
 
     private fun ReturnStmt.symbolicSuccess(): SymbolicSuccess {
         val type = environment.method.returnType
