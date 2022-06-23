@@ -2,6 +2,7 @@ package org.utbot.contest
 
 import mu.KotlinLogging
 import org.utbot.analytics.EngineAnalyticsContext
+import org.utbot.analytics.Predictors
 import org.utbot.common.FileUtil
 import org.utbot.common.bracket
 import org.utbot.common.info
@@ -34,6 +35,9 @@ import kotlin.concurrent.thread
 import kotlin.math.min
 import kotlin.system.exitProcess
 import org.utbot.framework.JdkPathService
+import org.utbot.framework.PathSelectorType
+import org.utbot.framework.UtSettings
+import org.utbot.predictors.NNStateRewardPredictorBase
 
 private val logger = KotlinLogging.logger {}
 
@@ -323,7 +327,10 @@ fun runEstimator(
 //    Predictors.smt = UtBotTimePredictor()
 //    Predictors.smtIncremental = UtBotTimePredictorIncremental()
 //    Predictors.testName = StatementUniquenessPredictor()
-//    Predictors.stateRewardPredictor = NNStateRewardPredictorBase()
+    if (UtSettings.pathSelectorType == PathSelectorType.NN_REWARD_GUIDED_SELECTOR) {
+        Predictors.stateRewardPredictor = NNStateRewardPredictorBase()
+    }
+
     EngineAnalyticsContext.featureProcessorFactory = FeatureProcessorWithStatesRepetitionFactory()
     EngineAnalyticsContext.featureExtractorFactory = FeatureExtractorFactoryImpl()
 
