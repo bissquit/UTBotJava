@@ -3,6 +3,7 @@ package org.utbot.gradle.plugin
 import mu.KLogger
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
+import org.utbot.common.FileUtil.createNewFileWithParentDirectories
 import org.utbot.common.bracket
 import org.utbot.common.debug
 import org.utbot.framework.plugin.api.util.UtContext
@@ -13,6 +14,7 @@ import org.utbot.gradle.plugin.wrappers.GradleProjectWrapper
 import org.utbot.gradle.plugin.wrappers.SourceFindingStrategyGradle
 import org.utbot.gradle.plugin.wrappers.SourceSetWrapper
 import org.utbot.framework.plugin.sarif.TargetClassWrapper
+import java.nio.file.Paths
 import javax.inject.Inject
 
 /**
@@ -42,9 +44,14 @@ open class GenerateTestsAndSarifReportTask @Inject constructor(
         }
         try {
             generateForProjectRecursively(rootGradleProject)
+            val mergedSarifReportFile = project.gradle.startParameter.projectProperties["mergedSarifReportFileName"]
+                ?.let { mergedSarifReportFileName ->
+                    Paths.get(rootGradleProject.generatedSarifDirectory.path, mergedSarifReportFileName)
+                        .toFile().apply { createNewFileWithParentDirectories() }
+                }
             GenerateTestsAndSarifReportFacade.mergeReports(
                 sarifReports = rootGradleProject.collectReportsRecursively(),
-                mergedSarifReportFile = rootGradleProject.sarifReportFile
+                mergedSarifReportFile = mergedSarifReportFile ?: rootGradleProject.sarifReportFile
             )
         } catch (t: Throwable) {
             logger.error(t) { "Unexpected error while generating SARIF report" }
