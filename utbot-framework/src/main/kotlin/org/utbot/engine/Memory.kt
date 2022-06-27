@@ -141,7 +141,8 @@ data class Memory( // TODO: split purely symbolic memory and information about s
 
     /**
      * Storage for addresses that we speculatively consider non-nullable (e.g., final fields of system classes).
-     * See [org.utbot.engine.UtBotSymbolicEngine.createFieldOrMock] for details.
+     * See [org.utbot.engine.UtBotSymbolicEngine.createFieldOrMock] for usage,
+     * and [docs/SpeculativeFieldNonNullability.md] for details.
      */
     private val speculativelyNotNullAddresses: UtArrayExpressionBase = UtConstArrayExpression(
         UtFalse,

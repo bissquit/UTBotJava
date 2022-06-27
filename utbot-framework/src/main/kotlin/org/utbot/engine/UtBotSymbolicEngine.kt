@@ -1938,10 +1938,6 @@ class UtBotSymbolicEngine(
         is JInstanceFieldRef -> {
             val instance = (base.resolve() as ObjectValue)
             recordInstanceFieldRead(instance.addr, field)
-
-            // We know that [base] is not null as we are accessing its field (dot access).
-            // At the same time, we don't want to check for NPE if [base] is a final field
-            // (or if it is a non-nullable field).
             nullPointerExceptionCheck(instance.addr)
 
             val objectType = if (instance.concrete?.value is BaseOverriddenWrapper) {
@@ -2153,34 +2149,8 @@ class UtBotSymbolicEngine(
                 queuedSymbolicStateUpdates += mkNot(mkEq(createdField.addr, nullObjectAddr)).asHardConstraint()
             }
 
-            // We suppose that accessing final fields in system classes can't produce NullPointerException
-            // because they are properly initialized in corresponding constructors. It is therefore
-            // desirable to avoid the generation of redundant test cases for NPE branches.
-            //
-            // At the same time, we can't always add the "not null" hard constraint for the field: it would break
-            // some special cases like `Optional<T>` class, which uses the null value of its final field
-            // as a marker of an empty value.
-            //
-            // The engine checks for NPE and creates an NPE branch every time the address is used
-            // as a base of a dot call (i.e., a method call or a field access);
-            // see [UtBotSymbolicEngine.nullPointerExceptionCheck]). The problem is what at that moment, we would have
-            // no way to check whether the address corresponds to a final field, as the corresponding node
-            // of the global graph would refer to a local variable. The only place where we have the complete
-            // information about the field is this method.
-            //
-            // We use the following approach. If the field is final and belongs to a system class,
-            // we mark it as a speculatively non-nullable in the memory. During the NPE check
-            // we will add two constraints to the NPE branch: "address has not been speculatively marked
-            // as non-nullable", and "address is null".
-            //
-            // For final fields, this condition can't be satisfied, as we speculatively mark final fields
-            // as non-nullable here. As a result, the NPE branch would be discarded. If a field is not final,
-            // the condition is satisfiable, so the NPE branch would stay alive.
-            //
-            // We limit this approach to the system classes only, because it is hard to speculatively assume
-            // something about non-nullability of final fields in the user code.
-
-            if (field.isFinal && !field.declaringClass.isApplicationClass && !checkNpeForFinalFields) {
+            // See docs/SpeculativeFieldNonNullability.md for details
+            if (field.isFinal && field.declaringClass.isLibraryClass && !checkNpeForFinalFields) {
                 markAsSpeculativelyNotNull(createdField.addr)
             }
         }
@@ -3274,10 +3244,11 @@ class UtBotSymbolicEngine(
     private fun nullPointerExceptionCheck(addr: UtAddrExpression) {
         val canBeNull = addrEq(addr, nullObjectAddr)
         val canNotBeNull = mkNot(canBeNull)
-        val notFinalAndNull = mkAnd(mkEq(memory.isSpeculativelyNotNull(addr), mkFalse()), canBeNull)
+        val notMarked = mkEq(memory.isSpeculativelyNotNull(addr), mkFalse())
+        val notMarkedAndNull = mkAnd(notMarked, canBeNull)
 
         if (environment.method.checkForNPE(environment.state.executionStack.size)) {
-            implicitlyThrowException(NullPointerException(), setOf(notFinalAndNull))
+            implicitlyThrowException(NullPointerException(), setOf(notMarkedAndNull))
         }
 
         queuedSymbolicStateUpdates += canNotBeNull.asHardConstraint()
