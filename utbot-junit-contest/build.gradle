@@ -48,7 +48,6 @@ jacocoTestReport {
 
 dependencies {
     api project(":utbot-framework")
-    api project(":utbot-analytics")
 
     api project(":utbot-instrumentation")
 
@@ -64,6 +63,8 @@ dependencies {
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '4.2.0'
     testImplementation group: 'org.mockito', name: 'mockito-inline', version: '4.2.0'
     testImplementation 'junit:junit:4.13.2'
+
+    compile project(":utbot-analytics")
 }
 
 jar { dependsOn classes

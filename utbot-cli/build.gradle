@@ -9,7 +9,6 @@ compileKotlin {
 
 dependencies {
     api project(":utbot-framework")
-    api project(":utbot-analytics")
     api project(':utbot-summary')
 
     implementation group: 'org.mockito', name: 'mockito-core', version: mockito_version
@@ -25,6 +24,8 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: log4j2_version
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: log4j2_version
     implementation group: 'org.jacoco', name: 'org.jacoco.report', version: jacoco_version
+
+    compile project(":utbot-analytics")
 }
 
 task createProperties(dependsOn: processResources) {

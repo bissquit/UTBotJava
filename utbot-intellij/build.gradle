@@ -21,13 +21,12 @@ buildscript {
 
 dependencies {
     api project(':utbot-summary')
-    api project(':utbot-analytics')
-    api ('com.esotericsoftware:kryo:5.1.1')
+    compileOnly  'com.esotericsoftware:kryo:5.1.1'
 
-    implementation group: 'io.github.microutils', name: 'kotlin-logging', version: kotlin_logging_version
-    implementation group: 'org.apache.commons', name: 'commons-text', version: apache_commons_text_version
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.1'
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: jackson_version
+    compileOnly  group: 'io.github.microutils', name: 'kotlin-logging', version: kotlin_logging_version
+    compileOnly  group: 'org.apache.commons', name: 'commons-text', version: apache_commons_text_version
+    compileOnly  'org.apache.httpcomponents.client5:httpclient5:5.1'
+    compileOnly  group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: jackson_version
 
     implementation(project(":utbot-framework")) { exclude group: 'org.slf4j', module: 'slf4j-api' }
     implementation(project(":utbot-fuzzers"))
@@ -35,6 +34,8 @@ dependencies {
     testImplementation 'org.mock-server:mockserver-netty:5.4.1'
     testImplementation(project(":utbot-sample"))
     testApi(project(":utbot-framework"))
+
+    //compileOnly  project(":utbot-analytics")
 }
 
 apply plugin: 'org.jetbrains.intellij'
