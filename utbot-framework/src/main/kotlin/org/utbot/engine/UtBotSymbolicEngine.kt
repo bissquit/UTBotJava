@@ -1,21 +1,8 @@
 package org.utbot.engine
 
-import kotlinx.collections.immutable.persistentHashMapOf
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.persistentSetOf
-import kotlinx.collections.immutable.toPersistentList
-import kotlinx.collections.immutable.toPersistentMap
-import kotlinx.collections.immutable.toPersistentSet
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.yield
+import kotlinx.collections.immutable.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import mu.KotlinLogging
 import org.utbot.analytics.EngineAnalyticsContext
 import org.utbot.analytics.FeatureProcessor
@@ -29,86 +16,17 @@ import org.utbot.common.unreachableBranch
 import org.utbot.common.withAccessibility
 import org.utbot.common.workaround
 import org.utbot.engine.MockStrategy.NO_MOCKS
+import org.utbot.engine.mvisitors.ConstraintModelVisitor
+import org.utbot.engine.mvisitors.visit
 import org.utbot.engine.overrides.UtArrayMock
 import org.utbot.engine.overrides.UtLogicMock
 import org.utbot.engine.overrides.UtOverrideMock
-import org.utbot.engine.pc.NotBoolExpression
-import org.utbot.engine.pc.UtAddNoOverflowExpression
-import org.utbot.engine.pc.UtAddrExpression
-import org.utbot.engine.pc.UtAndBoolExpression
-import org.utbot.engine.pc.UtArrayApplyForAll
-import org.utbot.engine.pc.UtArrayExpressionBase
-import org.utbot.engine.pc.UtArraySelectExpression
-import org.utbot.engine.pc.UtArraySetRange
-import org.utbot.engine.pc.UtArraySort
-import org.utbot.engine.pc.UtBoolExpression
-import org.utbot.engine.pc.UtBoolOpExpression
-import org.utbot.engine.pc.UtBvConst
-import org.utbot.engine.pc.UtBvLiteral
-import org.utbot.engine.pc.UtByteSort
-import org.utbot.engine.pc.UtCastExpression
-import org.utbot.engine.pc.UtCharSort
-import org.utbot.engine.pc.UtContextInitializer
-import org.utbot.engine.pc.UtExpression
-import org.utbot.engine.pc.UtFalse
-import org.utbot.engine.pc.UtInstanceOfExpression
-import org.utbot.engine.pc.UtIntSort
-import org.utbot.engine.pc.UtIsExpression
-import org.utbot.engine.pc.UtIteExpression
-import org.utbot.engine.pc.UtLongSort
-import org.utbot.engine.pc.UtMkTermArrayExpression
-import org.utbot.engine.pc.UtNegExpression
-import org.utbot.engine.pc.UtOrBoolExpression
-import org.utbot.engine.pc.UtPrimitiveSort
-import org.utbot.engine.pc.UtShortSort
-import org.utbot.engine.pc.UtSolver
-import org.utbot.engine.pc.UtSolverStatusSAT
-import org.utbot.engine.pc.UtSubNoOverflowExpression
-import org.utbot.engine.pc.UtTrue
-import org.utbot.engine.pc.addrEq
-import org.utbot.engine.pc.align
-import org.utbot.engine.pc.cast
-import org.utbot.engine.pc.findTheMostNestedAddr
-import org.utbot.engine.pc.isInteger
-import org.utbot.engine.pc.mkAnd
-import org.utbot.engine.pc.mkBVConst
-import org.utbot.engine.pc.mkBoolConst
-import org.utbot.engine.pc.mkChar
-import org.utbot.engine.pc.mkEq
-import org.utbot.engine.pc.mkFpConst
-import org.utbot.engine.pc.mkInt
-import org.utbot.engine.pc.mkNot
-import org.utbot.engine.pc.mkOr
-import org.utbot.engine.pc.select
-import org.utbot.engine.pc.store
-import org.utbot.engine.selectors.PathSelector
-import org.utbot.engine.selectors.StrategyOption
-import org.utbot.engine.selectors.coveredNewSelector
-import org.utbot.engine.selectors.cpInstSelector
-import org.utbot.engine.selectors.forkDepthSelector
-import org.utbot.engine.selectors.inheritorsSelector
-import org.utbot.engine.selectors.nnRewardGuidedSelector
+import org.utbot.engine.pc.*
+import org.utbot.engine.selectors.*
 import org.utbot.engine.selectors.nurs.NonUniformRandomSearch
-import org.utbot.engine.selectors.pollUntilFastSAT
-import org.utbot.engine.selectors.randomPathSelector
-import org.utbot.engine.selectors.randomSelector
 import org.utbot.engine.selectors.strategies.GraphViz
-import org.utbot.engine.selectors.subpathGuidedSelector
-import org.utbot.engine.symbolic.HardConstraint
-import org.utbot.engine.symbolic.SoftConstraint
-import org.utbot.engine.symbolic.Assumption
-import org.utbot.engine.symbolic.SymbolicState
-import org.utbot.engine.symbolic.SymbolicStateUpdate
-import org.utbot.engine.symbolic.asHardConstraint
-import org.utbot.engine.symbolic.asSoftConstraint
-import org.utbot.engine.symbolic.asAssumption
-import org.utbot.engine.symbolic.asUpdate
-import org.utbot.engine.util.statics.concrete.associateEnumSootFieldsWithConcreteValues
-import org.utbot.engine.util.statics.concrete.isEnumAffectingExternalStatics
-import org.utbot.engine.util.statics.concrete.isEnumValuesFieldName
-import org.utbot.engine.util.statics.concrete.makeEnumNonStaticFieldsUpdates
-import org.utbot.engine.util.statics.concrete.makeEnumStaticFieldsUpdates
-import org.utbot.engine.util.statics.concrete.makeSymbolicValuesFromEnumConcreteValues
+import org.utbot.engine.symbolic.*
+import org.utbot.engine.util.statics.concrete.*
 import org.utbot.framework.PathSelectorType
 import org.utbot.framework.UtSettings
 import org.utbot.framework.UtSettings.checkSolverTimeoutMillis
@@ -116,46 +34,32 @@ import org.utbot.framework.UtSettings.enableFeatureProcess
 import org.utbot.framework.UtSettings.pathSelectorStepsLimit
 import org.utbot.framework.UtSettings.pathSelectorType
 import org.utbot.framework.UtSettings.preferredCexOption
+import org.utbot.framework.UtSettings.processUnknownStatesDuringConcreteExecution
 import org.utbot.framework.UtSettings.substituteStaticsWithSymbolicVariable
 import org.utbot.framework.UtSettings.useDebugVisualization
-import org.utbot.framework.UtSettings.processUnknownStatesDuringConcreteExecution
 import org.utbot.framework.concrete.UtConcreteExecutionData
 import org.utbot.framework.concrete.UtConcreteExecutionResult
 import org.utbot.framework.concrete.UtExecutionInstrumentation
-import org.utbot.framework.plugin.api.ClassId
-import org.utbot.framework.plugin.api.ConcreteExecutionFailureException
-import org.utbot.framework.plugin.api.EnvironmentModels
-import org.utbot.framework.plugin.api.FieldId
-import org.utbot.framework.plugin.api.Instruction
-import org.utbot.framework.plugin.api.MethodId
-import org.utbot.framework.plugin.api.MissingState
+import org.utbot.framework.plugin.api.*
 import org.utbot.framework.plugin.api.Step
-import org.utbot.framework.plugin.api.UtConcreteExecutionFailure
-import org.utbot.framework.plugin.api.UtError
-import org.utbot.framework.plugin.api.UtExecution
-import org.utbot.framework.plugin.api.UtInstrumentation
-import org.utbot.framework.plugin.api.UtMethod
-import org.utbot.framework.plugin.api.UtNullModel
-import org.utbot.framework.plugin.api.UtOverflowFailure
-import org.utbot.framework.plugin.api.UtResult
-import org.utbot.framework.plugin.api.classId
-import org.utbot.framework.plugin.api.graph
-import org.utbot.framework.plugin.api.id
-import org.utbot.framework.plugin.api.onSuccess
-import org.utbot.framework.plugin.api.util.executableId
-import org.utbot.framework.plugin.api.util.id
-import org.utbot.framework.plugin.api.util.jClass
-import org.utbot.framework.plugin.api.util.signature
-import org.utbot.framework.plugin.api.util.utContext
+import org.utbot.framework.plugin.api.util.*
 import org.utbot.framework.util.description
 import org.utbot.framework.util.executableId
-import org.utbot.fuzzer.FuzzedMethodDescription
-import org.utbot.fuzzer.ModelProvider
-import org.utbot.fuzzer.FallbackModelProvider
-import org.utbot.fuzzer.collectConstantsForFuzzer
-import org.utbot.fuzzer.defaultModelProviders
-import org.utbot.fuzzer.fuzz
+import org.utbot.fuzzer.*
+import org.utbot.fuzzer.providers.CollectionModelProvider
+import org.utbot.fuzzer.providers.NullModelProvider
+import org.utbot.fuzzer.providers.ObjectModelProvider
 import org.utbot.instrumentation.ConcreteExecutor
+import soot.*
+import soot.jimple.*
+import soot.jimple.internal.*
+import soot.toolkits.graph.ExceptionalUnitGraph
+import sun.reflect.Reflection
+import sun.reflect.generics.reflectiveObjects.GenericArrayTypeImpl
+import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
+import sun.reflect.generics.reflectiveObjects.TypeVariableImpl
+import sun.reflect.generics.reflectiveObjects.WildcardTypeImpl
+import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
 import kotlin.collections.plus
 import kotlin.collections.plusAssign
@@ -165,96 +69,6 @@ import kotlin.reflect.full.instanceParameter
 import kotlin.reflect.full.valueParameters
 import kotlin.reflect.jvm.javaType
 import kotlin.system.measureTimeMillis
-import soot.ArrayType
-import soot.BooleanType
-import soot.ByteType
-import soot.CharType
-import soot.DoubleType
-import soot.FloatType
-import soot.IntType
-import soot.LongType
-import soot.PrimType
-import soot.RefLikeType
-import soot.RefType
-import soot.Scene
-import soot.ShortType
-import soot.SootClass
-import soot.SootField
-import soot.SootMethod
-import soot.SootMethodRef
-import soot.Type
-import soot.Value
-import soot.VoidType
-import soot.jimple.ArrayRef
-import soot.jimple.BinopExpr
-import soot.jimple.ClassConstant
-import soot.jimple.Constant
-import soot.jimple.DefinitionStmt
-import soot.jimple.DoubleConstant
-import soot.jimple.Expr
-import soot.jimple.FieldRef
-import soot.jimple.FloatConstant
-import soot.jimple.IdentityRef
-import soot.jimple.IntConstant
-import soot.jimple.InvokeExpr
-import soot.jimple.LongConstant
-import soot.jimple.MonitorStmt
-import soot.jimple.NeExpr
-import soot.jimple.NullConstant
-import soot.jimple.ParameterRef
-import soot.jimple.ReturnStmt
-import soot.jimple.StaticFieldRef
-import soot.jimple.Stmt
-import soot.jimple.StringConstant
-import soot.jimple.SwitchStmt
-import soot.jimple.ThisRef
-import soot.jimple.internal.JAddExpr
-import soot.jimple.internal.JArrayRef
-import soot.jimple.internal.JAssignStmt
-import soot.jimple.internal.JBreakpointStmt
-import soot.jimple.internal.JCastExpr
-import soot.jimple.internal.JCaughtExceptionRef
-import soot.jimple.internal.JDivExpr
-import soot.jimple.internal.JDynamicInvokeExpr
-import soot.jimple.internal.JEqExpr
-import soot.jimple.internal.JGeExpr
-import soot.jimple.internal.JGotoStmt
-import soot.jimple.internal.JGtExpr
-import soot.jimple.internal.JIdentityStmt
-import soot.jimple.internal.JIfStmt
-import soot.jimple.internal.JInstanceFieldRef
-import soot.jimple.internal.JInstanceOfExpr
-import soot.jimple.internal.JInterfaceInvokeExpr
-import soot.jimple.internal.JInvokeStmt
-import soot.jimple.internal.JLeExpr
-import soot.jimple.internal.JLengthExpr
-import soot.jimple.internal.JLookupSwitchStmt
-import soot.jimple.internal.JLtExpr
-import soot.jimple.internal.JMulExpr
-import soot.jimple.internal.JNeExpr
-import soot.jimple.internal.JNegExpr
-import soot.jimple.internal.JNewArrayExpr
-import soot.jimple.internal.JNewExpr
-import soot.jimple.internal.JNewMultiArrayExpr
-import soot.jimple.internal.JNopStmt
-import soot.jimple.internal.JRemExpr
-import soot.jimple.internal.JRetStmt
-import soot.jimple.internal.JReturnStmt
-import soot.jimple.internal.JReturnVoidStmt
-import soot.jimple.internal.JSpecialInvokeExpr
-import soot.jimple.internal.JStaticInvokeExpr
-import soot.jimple.internal.JSubExpr
-import soot.jimple.internal.JTableSwitchStmt
-import soot.jimple.internal.JThrowStmt
-import soot.jimple.internal.JVirtualInvokeExpr
-import soot.jimple.internal.JimpleLocal
-import soot.toolkits.graph.ExceptionalUnitGraph
-import sun.reflect.Reflection
-import sun.reflect.generics.reflectiveObjects.GenericArrayTypeImpl
-import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
-import sun.reflect.generics.reflectiveObjects.TypeVariableImpl
-import sun.reflect.generics.reflectiveObjects.WildcardTypeImpl
-import java.lang.reflect.Method
 
 private val logger = KotlinLogging.logger {}
 val pathLogger = KotlinLogging.logger(logger.name + ".path")
@@ -560,9 +374,44 @@ class UtBotSymbolicEngine(
         }
     }
 
+    private fun getModelProviderToFuzzingInitializing(modelProvider: ModelProvider): ModelProvider =
+        modelProvider
+            .with(NullModelProvider)
+            // these providers use AssembleModel, now impossible to get path conditions from it
+            .exceptIsInstance<ObjectModelProvider>()
+            .exceptIsInstance<CollectionModelProvider>()
 
-    //Simple fuzzing
-    fun fuzzing(modelProvider: (ModelProvider) -> ModelProvider = { it }) = flow {
+    /**
+     * Construct sequence of [ExecutionState] that's initialized by fuzzing.
+     */
+    private fun statesInitializedFromFuzzing(state: ExecutionState, hasThis: Boolean): Sequence<ExecutionState> =
+        withEnvironmentState(state) {
+            fuzzInitialModels(::getModelProviderToFuzzingInitializing, FallbackModelProvider { nextDefaultModelId++ })
+                .map { parameters ->
+                    withIsolatedUpdates {
+                        val initialConstraints = if (hasThis) {
+                            state.parameters.drop(1)
+                        } else {
+                            state.parameters
+                        }.zip(parameters).flatMap { (parameter, model) ->
+                            buildConstraintsFromModel(parameter.value, model)
+                        }
+                        state.updateMemory(queuedSymbolicStateUpdates).apply {
+                            solver.checkWithInitialConstraints(initialConstraints)
+                        }
+                    }
+                }
+        }
+
+    private fun buildConstraintsFromModel(symbolicValue: SymbolicValue, model: UtModel): List<UtBoolExpression> {
+        val modelVisitor = ConstraintModelVisitor(symbolicValue, this)
+        return model.visit(modelVisitor)
+    }
+
+    private fun fuzzInitialModels(
+        modelProvider: (ModelProvider) -> ModelProvider,
+        fallbackModelProvider: FallbackModelProvider
+    ): Sequence<List<UtModel>> {
         val executableId = if (methodUnderTest.isConstructor) {
             methodUnderTest.javaConstructor!!.executableId
         } else {
@@ -574,9 +423,18 @@ class UtBotSymbolicEngine(
             classId != Class::class.java.id  // causes java.lang.IllegalAccessException: java.lang.Class at sun.misc.Unsafe.allocateInstance(Native Method)
         }
         if (!isFuzzable) {
-            return@flow
+            return emptySequence()
         }
 
+        val methodUnderTestDescription = FuzzedMethodDescription(executableId, collectConstantsForFuzzer(graph))
+        val modelProviderWithFallback = modelProvider(defaultModelProviders { nextDefaultModelId++ })
+            .withFallback(fallbackModelProvider::toModel)
+
+        return fuzz(methodUnderTestDescription, modelProviderWithFallback)
+    }
+
+    //Simple fuzzing
+    fun fuzzing(modelProvider: (ModelProvider) -> ModelProvider = { it }) = flow {
         val fallbackModelProvider = FallbackModelProvider { nextDefaultModelId++ }
 
         val thisInstance = when {
@@ -598,11 +456,9 @@ class UtBotSymbolicEngine(
             }
         }
 
-        val methodUnderTestDescription = FuzzedMethodDescription(executableId, collectConstantsForFuzzer(graph))
-        val modelProviderWithFallback = modelProvider(defaultModelProviders { nextDefaultModelId++ }).withFallback(fallbackModelProvider::toModel)
         val coveredInstructionTracker = mutableSetOf<Instruction>()
         var attempts = UtSettings.fuzzingMaxAttemps
-        fuzz(methodUnderTestDescription, modelProviderWithFallback).forEachIndexed { index, parameters ->
+        fuzzInitialModels(modelProvider, fallbackModelProvider).forEachIndexed { index, parameters ->
             val initialEnvironmentModels = EnvironmentModels(thisInstance, parameters, mapOf())
 
             try {
@@ -1259,10 +1115,27 @@ class UtBotSymbolicEngine(
 
                 environment.state.parameters += Parameter(localVariable, identityRef.type, value)
 
-                val nextState = environment.state.updateQueued(
+                var nextState = environment.state.updateQueued(
                     globalGraph.succ(current),
                     SymbolicStateUpdate(localMemoryUpdates = localMemoryUpdate(localVariable to value))
                 )
+                // TODO: refactor this
+                if (UtSettings.useFuzzingInitialization && !isInNestedMethod()) {
+                    val hasThis = methodUnderTest.run {
+                        !isStatic && !isConstructor
+                    }
+                    var expectedParamsSize = methodUnderTest.javaMethod!!.parameterCount
+                    if (hasThis) {
+                        ++expectedParamsSize
+                    }
+
+                    if (expectedParamsSize == environment.state.parameters.size) {
+                        statesInitializedFromFuzzing(nextState, hasThis).firstOrNull()?.let {
+                            nextState = it
+                        }
+                    }
+                }
+
                 pathSelector.offer(nextState)
             }
             is JCaughtExceptionRef -> {
@@ -1602,13 +1475,7 @@ class UtBotSymbolicEngine(
             }
             is ClassConstant -> {
                 val sootType = toSootType()
-                val result = if (sootType is RefLikeType) {
-                    typeRegistry.createClassRef(sootType.baseType, sootType.numDimensions)
-                } else {
-                    error("Can't get class constant for $value")
-                }
-                queuedSymbolicStateUpdates += result.symbolicStateUpdate
-                (result.symbolicResult as SymbolicSuccess).value
+                createClassRef(sootType)
             }
             else -> error("Unsupported type: $this")
         }
@@ -2156,6 +2023,16 @@ class UtBotSymbolicEngine(
             is ObjectValue -> error("Unsupported type of $variable for preferredConstraints option")
         }
 
+    fun createClassRef(sootType: Type): SymbolicValue {
+        val result = if (sootType is RefLikeType) {
+            typeRegistry.createClassRef(sootType.baseType, sootType.numDimensions)
+        } else {
+            error("Can't get class constant for $sootType")
+        }
+        queuedSymbolicStateUpdates += result.symbolicStateUpdate
+        return (result.symbolicResult as SymbolicSuccess).value
+    }
+
     private fun createField(
         objectType: RefType,
         addr: UtAddrExpression,
@@ -2367,7 +2244,7 @@ class UtBotSymbolicEngine(
      *
      * If the field belongs to a substitute object, record the read access for the real type instead.
      */
-    private fun recordInstanceFieldRead(addr: UtAddrExpression, field: SootField) {
+    fun recordInstanceFieldRead(addr: UtAddrExpression, field: SootField) {
         val realType = typeRegistry.findRealType(field.declaringClass.type)
         if (realType is RefType) {
             val readOperation = InstanceFieldReadOperation(addr, FieldId(realType.id, field.name))
@@ -2986,10 +2863,8 @@ class UtBotSymbolicEngine(
             return when (instance) {
                 is ReferenceValue -> {
                     val type = instance.type
-                    val createClassRef = if (type is RefLikeType) {
-                        typeRegistry.createClassRef(type.baseType, type.numDimensions)
-                    } else {
-                        error("Can't get class name for $type")
+                    val createClassRef = asMethodResult {
+                        createClassRef(type)
                     }
                     OverrideResult(success = true, createClassRef)
                 }
@@ -3762,6 +3637,26 @@ class UtBotSymbolicEngine(
             else -> instance
         }
         return SymbolicSuccess(value)
+    }
+
+    private inline fun <reified T> withEnvironmentState(state: ExecutionState, block: () -> T): T {
+        val prevState = environment.state;
+        try {
+            environment.state = state
+            return block()
+        } finally {
+            environment.state = prevState
+        }
+    }
+
+    private inline fun <reified T> withIsolatedUpdates(block: () -> T): T {
+        val prevSymbolicStateUpdate = queuedSymbolicStateUpdates
+        try {
+            queuedSymbolicStateUpdates = SymbolicStateUpdate()
+            return block()
+        } finally {
+            queuedSymbolicStateUpdates = prevSymbolicStateUpdate
+        }
     }
 
     internal fun asMethodResult(function: UtBotSymbolicEngine.() -> SymbolicValue): MethodResult {
