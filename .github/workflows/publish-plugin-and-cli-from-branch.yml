@@ -25,7 +25,7 @@ env:
 
 jobs:
     publish_plugin_and_cli:
-      runs-on: [self-hosted, local]
+      runs-on: [self-hosted, home]
       #runs-on: ubuntu-latest
       container:
         image: ubuntu:20.04
