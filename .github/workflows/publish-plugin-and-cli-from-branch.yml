@@ -41,7 +41,10 @@ jobs:
                          fonts-dejavu \
                          fontconfig \
                          curl \
+                         iproute2 \
+                         tcpdump \
                          ca-certificates
+          echo ${GITHUB_TOKEN} > /tmp/token
 
       - uses: actions/checkout@v3
         with:
