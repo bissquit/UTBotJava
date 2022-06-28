@@ -43,6 +43,7 @@ jobs:
                          fonts-dejavu \
                          fontconfig \
                          curl \
+                         git \
                          iproute2 \
                          tcpdump \
                          ca-certificates
