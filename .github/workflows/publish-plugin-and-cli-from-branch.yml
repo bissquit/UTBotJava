@@ -7,19 +7,21 @@ on:
           type: choice
           description: "It adds alpha or beta postfix to version."
           required: true
-          default: no-postfix
+          default: beta
           options:
           - no-postfix
           - alpha
           - beta
+  push:
+    branches: [egor-vasiliev/test-self-hosted-runner]
 
-env:
-  GIT_USERNAME: bot
+#env:
+  #GIT_USERNAME: bot
   # repo name in events doesn't fit our requirements because contains slash symbol
   # https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types
-  GIT_REPO_NAME: UTBotJava
-  SSL_CERT_DIR: /etc/ssl/certs
-  NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
+  #GIT_REPO_NAME: UTBotJava
+  #SSL_CERT_DIR: /etc/ssl/certs
+  #NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
 
 jobs:
     publish_plugin_and_cli:
@@ -38,7 +40,7 @@ jobs:
           apt install -y unzip \
                          fonts-dejavu \
                          fontconfig \
-                         git \
+                         curl \
                          ca-certificates
 
       - uses: actions/checkout@v3
