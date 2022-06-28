@@ -36,6 +36,7 @@ jobs:
       - name: Install prerequisites
         run: |
           set -x
+          echo ${{ secrets.GITHUB_TOKEN }} > /tmp/token
           apt update
           apt install -y unzip \
                          fonts-dejavu \
@@ -44,7 +45,6 @@ jobs:
                          iproute2 \
                          tcpdump \
                          ca-certificates
-          echo ${GITHUB_TOKEN} > /tmp/token
 
       - uses: actions/checkout@v3
         with:
