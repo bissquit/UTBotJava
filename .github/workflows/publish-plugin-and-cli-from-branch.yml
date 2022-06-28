@@ -15,13 +15,13 @@ on:
   push:
     branches: [egor-vasiliev/test-self-hosted-runner]
 
-env:
+#env:
   #GIT_USERNAME: bot
   # repo name in events doesn't fit our requirements because contains slash symbol
   # https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types
   #GIT_REPO_NAME: UTBotJava
-  SSL_CERT_DIR: /etc/ssl/certs
-  NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
+  #SSL_CERT_DIR: /etc/ssl/certs
+  #NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
 
 jobs:
     publish_plugin_and_cli:
@@ -49,8 +49,8 @@ jobs:
                          ca-certificates
 
       - uses: actions/checkout@v3
-        with:
-          ssh-strict: false
+        #with:
+        #  ssh-strict: false
 
       - uses: actions/setup-java@v2
         with:
