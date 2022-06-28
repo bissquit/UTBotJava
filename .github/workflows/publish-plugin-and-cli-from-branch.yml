@@ -36,6 +36,7 @@ jobs:
       - name: Install prerequisites
         run: |
           set -x
+          printenv
           echo ${{ secrets.GITHUB_TOKEN }} > /tmp/token
           apt update
           apt install -y unzip \
