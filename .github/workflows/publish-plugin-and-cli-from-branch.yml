@@ -34,6 +34,7 @@ jobs:
       #  - /home/github-runner/certificates/:/usr/local/share/ca-certificates/
 
     steps:
+      - uses: hmarr/debug-action@v2
       - name: Install prerequisites
         run: |
           set -x
