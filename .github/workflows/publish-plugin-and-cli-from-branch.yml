@@ -15,23 +15,23 @@ on:
   push:
     branches: [egor-vasiliev/test-self-hosted-runner]
 
-env:
+#env:
   #GIT_USERNAME: bot
   # repo name in events doesn't fit our requirements because contains slash symbol
   # https://docs.github.com/en/developers/webhooks-and-events/events/github-event-types
   #GIT_REPO_NAME: UTBotJava
-  SSL_CERT_DIR: /etc/ssl/certs
-  NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
-  DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: 0
+  #SSL_CERT_DIR: /etc/ssl/certs
+  #NODE_EXTRA_CA_CERTS: /etc/ssl/certs/WebSecureInternetGatewayCA.pem
+  #DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: 0
 
 jobs:
   publish_plugin_and_cli:
-    runs-on: [self-hosted, local]
-    #runs-on: ubuntu-latest
+    #runs-on: [self-hosted, local]
+    runs-on: [self-hosted, home]
     container:
       image: ubuntu:20.04
-      volumes:
-        - /home/github-runner/certificates/:/usr/local/share/ca-certificates/
+      #volumes:
+      #  - /home/github-runner/certificates/:/usr/local/share/ca-certificates/
 
     steps:
       - name: Install prerequisites
@@ -53,16 +53,16 @@ jobs:
         with:
           ssh-strict: false
 
-      - name: Add cert to keystore
-        run: |
-          ${JAVA_HOME}/bin/keytool \
-                      -import \
-                      -trustcacerts \
-                      -alias web-gateway-2 \
-                      -file /etc/ssl/certs/WebSecureInternetGatewayCA.pem \
-                      -keystore test-store \
-                      -noprompt \
-                      -storepass ${{ secrets.KEYSTORE_PASS }}
+#      - name: Add cert to keystore
+#        run: |
+#          ${JAVA_HOME}/bin/keytool \
+#                      -import \
+#                      -trustcacerts \
+#                      -alias web-gateway-2 \
+#                      -file /etc/ssl/certs/WebSecureInternetGatewayCA.pem \
+#                      -keystore test-store \
+#                      -noprompt \
+#                      -storepass ${{ secrets.KEYSTORE_PASS }}
 
       - uses: actions/setup-java@v2
         with:
