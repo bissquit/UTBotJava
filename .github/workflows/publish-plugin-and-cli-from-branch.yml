@@ -48,9 +48,9 @@ jobs:
                          tcpdump \
                          ca-certificates
 
-      - uses: actions/checkout@v3
-        with:
-          ssh-strict: false
+#      - uses: actions/checkout@v3
+#        with:
+#          ssh-strict: false
 
       - uses: actions/setup-java@v2
         with:
