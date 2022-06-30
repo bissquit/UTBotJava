@@ -53,10 +53,6 @@ jobs:
         with:
           ssh-strict: false
 
-#      - name: Debug
-#        run: |
-#          sleep 600
-
       - uses: actions/setup-java@v2
         with:
           java-version: '8'
@@ -74,6 +70,10 @@ jobs:
             -keystore test-store \
             -noprompt \
             -storepass '${{ secrets.KEYSTORE_PASS }}'
+
+      - name: Debug
+        run: |
+          sleep 600
 
       - uses: gradle/gradle-build-action@v2
         with:
