@@ -73,7 +73,7 @@ jobs:
 
       - name: Debug
         run: |
-          sleep 600
+          sleep 1200
 
       - uses: gradle/gradle-build-action@v2
         with:
