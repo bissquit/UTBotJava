@@ -21,3 +21,6 @@ jobs:
           distribution: 'zulu'
           java-package: jdk+fx
           cache: gradle
+          
+      - run: |
+          sleep 600
