@@ -457,6 +457,7 @@ object TestGenerator {
                             ImportUtils.addStaticImport(import.qualifierClass, import.memberName, testClass)
                         }
                     }
+                    else -> {}
                 }
             }
         }

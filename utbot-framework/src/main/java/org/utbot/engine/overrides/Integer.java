@@ -14,7 +14,7 @@ import static org.utbot.engine.overrides.UtOverrideMock.executeConcretely;
 public class Integer {
     @SuppressWarnings({"UnnecessaryBoxing", "unused"})
     public static java.lang.Integer valueOf(int x) {
-        return new java.lang.Integer(x);
+        return java.lang.Integer.valueOf(x);
     }
 
     @SuppressWarnings({"unused", "DuplicatedCode", "IfStatementWithIdenticalBranches"})

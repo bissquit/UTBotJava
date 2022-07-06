@@ -6,9 +6,10 @@ import org.utbot.instrumentation.execute
 import org.utbot.instrumentation.instrumentation.InvokeInstrumentation
 import org.utbot.instrumentation.instrumentation.coverage.CoverageInstrumentation
 import java.math.BigInteger
-import javafx.util.Pair
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.utbot.test.util.UtPair
+import java.io.File
 
 class TestBenchmarkClasses {
     lateinit var utContext: AutoCloseable
@@ -17,7 +18,7 @@ class TestBenchmarkClasses {
     fun testRepeater() {
         ConcreteExecutor(
             CoverageInstrumentation,
-            Repeater::class.java.protectionDomain.codeSource.location.path
+            Repeater::class.java.protectionDomain.codeSource.location.path + File.pathSeparator + UtPair::class.java.protectionDomain.codeSource.location.path
         ).use {
             val dc0 = Repeater(", ")
             val res0 = it.execute(Repeater::concat, arrayOf(dc0, "flex", "mega-", 2))
@@ -25,7 +26,7 @@ class TestBenchmarkClasses {
 
 
             val dc1 = Unzipper()
-            val arr = arrayOf(Pair(1, 'h'), Pair(1, 'e'), Pair(2, 'l'), Pair(1, 'o'))
+            val arr = arrayOf(UtPair(1, 'h'), UtPair(1, 'e'), UtPair(2, 'l'), UtPair(1, 'o'))
             val res1 = it.execute(Unzipper::unzip, arrayOf(dc1, arr))
             assertEquals("h-e-ll-o-", res1.getOrNull())
         }

@@ -15,7 +15,7 @@ import static org.utbot.engine.overrides.UtOverrideMock.executeConcretely;
 public class Byte {
     @SuppressWarnings({"UnnecessaryBoxing", "unused"})
     public static java.lang.Byte valueOf(byte x) {
-        return new java.lang.Byte(x);
+        return java.lang.Byte.valueOf(x);
     }
 
     @SuppressWarnings({"unused", "DuplicatedCode", "IfStatementWithIdenticalBranches"})
