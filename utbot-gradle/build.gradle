@@ -10,7 +10,7 @@ configurations {
     fetchInstrumentationJar
 }
 
-dependencies {
+/*dependencies {
     shadow gradleApi()
     shadow localGroovy()
 
@@ -18,10 +18,10 @@ dependencies {
     fetchInstrumentationJar project(path: ':utbot-instrumentation', configuration: 'instrumentationArchive')
 
     implementation group: 'io.github.microutils', name: 'kotlin-logging', version: kotlin_logging_version
-}
+}*/
 
 // needed to prevent inclusion of gradle-api into shadow JAR
-configurations.compile.dependencies.remove dependencies.gradleApi()
+//configurations.compileClasspath.dependencies.remove dependencies.gradleApi()
 
 configurations.all {
     exclude group: "org.apache.logging.log4j", module: "log4j-slf4j-impl"
@@ -31,7 +31,7 @@ jar {
     manifest {
         // 'Fat JAR' is needed in org.utbot.framework.codegen.model.util.DependencyUtilsKt.checkDependencyIsFatJar
         attributes 'JAR-Type': 'Fat JAR'
-        attributes 'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+        attributes 'Class-Path': configurations.compileClasspath.collect { it.getName() }.join(' ')
     }
 }
 
@@ -40,7 +40,7 @@ jar {
  * But we need it to be packed. Workaround: double-nest the jar.
  */
 task shadowBugWorkaround(type: Jar) {
-    destinationDir file('build/shadow-bug-workaround')
+    destinationDirectory = layout.buildDirectory.dir('build/shadow-bug-workaround')
     from(configurations.fetchInstrumentationJar) {
         into "lib"
     }
@@ -63,11 +63,11 @@ publishing {
         pluginMaven(MavenPublication) {
             pom.withXml {
                 // removing a dependency to `utbot-framework` from the list of dependencies
-                asNode().dependencies.dependency.each { dependency ->
+               /* asNode().dependencies.dependency.each { dependency ->
                     if (dependency.artifactId[0].value()[0] == 'utbot-framework') {
-                        assert dependency.parent().remove(dependency)
+                      //  assert dependency.parent().remove(dependency)
                     }
-                }
+                }*/
             }
         }
     }
@@ -81,7 +81,7 @@ publishing {
 pluginBundle {
     website = 'https://www.utbot.org/'
     vcsUrl = 'https://github.com/UnitTestBot/UTBotJava/'
-    tags = ['java', 'unit-testing', 'tests-generation', 'sarif']
+    tags = ['java-library', 'unit-testing', 'tests-generation', 'sarif']
 }
 
 gradlePlugin {

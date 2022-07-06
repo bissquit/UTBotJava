@@ -164,7 +164,6 @@ import org.utbot.fuzzer.fuzz
 import org.utbot.fuzzer.names.MethodBasedNameSuggester
 import org.utbot.fuzzer.names.ModelBasedNameSuggester
 import org.utbot.instrumentation.ConcreteExecutor
-import java.lang.reflect.ParameterizedType
 import kotlin.collections.plus
 import kotlin.collections.plusAssign
 import kotlin.math.max
@@ -258,12 +257,7 @@ import soot.jimple.internal.JVirtualInvokeExpr
 import soot.jimple.internal.JimpleLocal
 import soot.tagkit.ParamNamesTag
 import soot.toolkits.graph.ExceptionalUnitGraph
-import sun.reflect.Reflection
-import sun.reflect.generics.reflectiveObjects.GenericArrayTypeImpl
-import sun.reflect.generics.reflectiveObjects.ParameterizedTypeImpl
-import sun.reflect.generics.reflectiveObjects.TypeVariableImpl
-import sun.reflect.generics.reflectiveObjects.WildcardTypeImpl
-import java.lang.reflect.Method
+import java.lang.reflect.*
 
 private val logger = KotlinLogging.logger {}
 val pathLogger = KotlinLogging.logger(logger.name + ".path")
@@ -1030,7 +1024,8 @@ class UtBotSymbolicEngine(
     private fun extractConcreteValue(field: SootField, declaringClass: SootClass): Any? =
         when (field.signature) {
             SECURITY_FIELD_SIGNATURE -> SecurityManager()
-            FIELD_FILTER_MAP_FIELD_SIGNATURE -> mapOf(Reflection::class to arrayOf("fieldFilterMap", "methodFilterMap"))
+            //todo change to string
+            //FIELD_FILTER_MAP_FIELD_SIGNATURE -> mapOf(Reflection::class to arrayOf("fieldFilterMap", "methodFilterMap"))
             METHOD_FILTER_MAP_FIELD_SIGNATURE -> emptyMap<Class<*>, Array<String>>()
             else -> declaringClass.id.jClass.findField(field.name).let { it.withAccessibility { it.get(null) } }
         }
@@ -1354,13 +1349,13 @@ class UtBotSymbolicEngine(
         if (type is ParameterizedType) {
             val typeStorages = type.actualTypeArguments.map { actualTypeArgument ->
                 when (actualTypeArgument) {
-                    is WildcardTypeImpl -> {
+                    is WildcardType -> {
                         val upperBounds = actualTypeArgument.upperBounds
                         val lowerBounds = actualTypeArgument.lowerBounds
                         val allTypes = upperBounds + lowerBounds
 
-                        if (allTypes.any { it is GenericArrayTypeImpl }) {
-                            val errorTypes = allTypes.filterIsInstance<GenericArrayTypeImpl>()
+                        if (allTypes.any { it is GenericArrayType }) {
+                            val errorTypes = allTypes.filterIsInstance<GenericArrayType>()
                             TODO("we do not support GenericArrayTypeImpl yet, and $errorTypes found. SAT-1446")
                         }
 
@@ -1369,11 +1364,11 @@ class UtBotSymbolicEngine(
 
                         typeResolver.constructTypeStorage(OBJECT_TYPE, upperBoundsTypes.intersect(lowerBoundsTypes))
                     }
-                    is TypeVariableImpl<*> -> { // it is a type variable for the whole class, not the function type variable
+                    is TypeVariable<*> -> { // it is a type variable for the whole class, not the function type variable
                         val upperBounds = actualTypeArgument.bounds
 
-                        if (upperBounds.any { it is GenericArrayTypeImpl }) {
-                            val errorTypes = upperBounds.filterIsInstance<GenericArrayTypeImpl>()
+                        if (upperBounds.any { it is GenericArrayType }) {
+                            val errorTypes = upperBounds.filterIsInstance<GenericArrayType>()
                             TODO("we do not support GenericArrayTypeImpl yet, and $errorTypes found. SAT-1446")
                         }
 
@@ -1381,11 +1376,11 @@ class UtBotSymbolicEngine(
 
                         typeResolver.constructTypeStorage(OBJECT_TYPE, upperBoundsTypes)
                     }
-                    is GenericArrayTypeImpl -> {
+                    is GenericArrayType -> {
                         // TODO bug with T[][], because there is no such time T JIRA:1446
                         typeResolver.constructTypeStorage(OBJECT_TYPE, useConcreteType = false)
                     }
-                    is ParameterizedTypeImpl, is Class<*> -> {
+                    is ParameterizedType, is Class<*> -> {
                         val sootType = Scene.v().getType(actualTypeArgument.rawType.typeName)
 
                         typeResolver.constructTypeStorage(sootType, useConcreteType = false)

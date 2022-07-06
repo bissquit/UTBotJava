@@ -14,7 +14,7 @@ import static org.utbot.engine.overrides.UtOverrideMock.executeConcretely;
 public class Long {
     @SuppressWarnings({"UnnecessaryBoxing", "unused"})
     public static java.lang.Long valueOf(long x) {
-        return new java.lang.Long(x);
+        return java.lang.Long.valueOf(x);
     }
 
     @SuppressWarnings({"unused", "DuplicatedCode", "IfStatementWithIdenticalBranches"})

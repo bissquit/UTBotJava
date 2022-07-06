@@ -14,7 +14,7 @@ import static org.utbot.engine.overrides.UtOverrideMock.executeConcretely;
 public class Short {
     @SuppressWarnings({"UnnecessaryBoxing", "unused"})
     public static java.lang.Short valueOf(short x) {
-        return new java.lang.Short(x);
+        return java.lang.Short.valueOf(x);
     }
 
     @SuppressWarnings({"unused", "DuplicatedCode", "IfStatementWithIdenticalBranches"})

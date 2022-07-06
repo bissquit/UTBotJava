@@ -6,7 +6,7 @@ import org.utbot.api.annotation.UtClassMock;
 public class Boolean {
     @SuppressWarnings({"UnnecessaryBoxing", "BooleanConstructorCall", "unused"})
     public static java.lang.Boolean valueOf(boolean x) {
-        return new java.lang.Boolean(x);
+        return java.lang.Boolean.valueOf(x);
     }
 
     public static java.lang.Boolean valueOf(String s) {
