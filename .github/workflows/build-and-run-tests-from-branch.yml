@@ -10,18 +10,18 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v2
       with:
-        java-version: '8'
+        java-version: '11'
         distribution: 'zulu'
         java-package: jdk+fx
         cache: gradle
     - uses: gradle/gradle-build-action@v2
       with:
-        gradle-version: 6.8
+        gradle-version: 7.4.2
         
     - name: Build and run tests in UTBot Java
       run: |
         export KOTLIN_HOME="/usr"
-        gradle clean build --no-daemon
+        gradle clean build --no-daemon --stacktrace --scan
         
     - name: Upload utbot-framework logs
       if: ${{ always() }}
@@ -36,6 +36,13 @@ jobs:
       with:
         name: utbot_framework_tests_report
         path: utbot-framework/build/reports/tests/test/*
+
+    - name: Upload utbot-instrumentation tests report artifacts if tests have failed
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: utbot_instrumentation_tests_report
+        path: utbot-instrumentation/build/reports/tests/test/*
         
     - name: Upload utbot-intellij tests report artifacts if tests have failed
       if: ${{ failure() }}
