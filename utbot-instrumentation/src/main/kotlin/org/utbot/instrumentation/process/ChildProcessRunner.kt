@@ -38,8 +38,7 @@ class ChildProcessRunner {
         processSeqN++
 
         if (UtSettings.logConcreteExecutionErrors) {
-            UT_BOT_TEMP_DIR.mkdirs()
-            errorLogFile = File(UT_BOT_TEMP_DIR, "${hashCode()}-${processSeqN}.log")
+            errorLogFile = File("concrete_executor.log")
         }
 
         val processBuilder = ProcessBuilder(cmds).redirectError(errorLogFile)
