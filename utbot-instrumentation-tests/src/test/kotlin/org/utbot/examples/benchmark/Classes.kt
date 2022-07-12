@@ -1,6 +1,6 @@
 package org.utbot.examples.benchmark
 
-import org.utbot.UtPair
+import org.utbot.test.util.UtPair
 
 
 class Repeater(var sep: String) {
