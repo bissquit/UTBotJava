@@ -29,13 +29,6 @@ jobs:
       with:
         name: utbot_framework_logs
         path: utbot-framework/logs/*
-        
-    - name: Upload concrete executor logs
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: concrete_executor_logs
-        path: concrete_executor.log
       
     - name: Upload utbot-framework tests report artifacts if tests have failed
       if: ${{ failure() }}
@@ -57,3 +50,7 @@ jobs:
       with:
         name: utbot_intellij_tests_report
         path: utbot-intellij/build/reports/tests/test/*
+        
+    - name: Setup tmate session
+      if: ${{ always() }}
+      uses: mxschmitt/action-tmate@v3
