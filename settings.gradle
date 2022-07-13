@@ -11,7 +11,7 @@ include 'utbot-analytics'
 include 'utbot-cli'
 include 'utbot-api'
 include 'utbot-instrumentation'
-include 'utbot-instrumentation-tests'
+//include 'utbot-instrumentation-tests'
 
 include 'utbot-summary'
 include 'utbot-gradle'
