@@ -30,6 +30,7 @@ dependencies {
     implementation group: 'org.jacoco', name: 'org.jacoco.report', version: jacoco_version
     //noinspection GroovyAssignabilityCheck
     fetchInstrumentationJar project(path: ':utbot-instrumentation', configuration:'instrumentationArchive')
+    testImplementation configurations.fetchInstrumentationJar
 }
 
 processResources {
