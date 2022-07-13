@@ -2,7 +2,7 @@ apply from: "${parent.projectDir}/gradle/include/jvm-project.gradle"
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    fetchInstrumentationJar
+    fetchInstrumentationJar.extendsFrom implementation
 }
 
 compileKotlin {
