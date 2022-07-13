@@ -6,6 +6,7 @@ import org.utbot.framework.util.Snippet
 import org.utbot.framework.util.compileClassFile
 import java.io.File
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 
@@ -86,6 +87,7 @@ internal class GenerateTestsCommandTest {
     }
 
     @Test
+    @Disabled
     fun positiveCase_sarif() {
         snippets.forEach { snippet ->
             performSarifChecks(
@@ -101,6 +103,7 @@ internal class GenerateTestsCommandTest {
     }
 
     @Test
+    @Disabled
     fun negativeCase_sarif() {
         performSarifChecks(
             testFramework = "junit4",
