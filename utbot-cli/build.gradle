@@ -30,10 +30,10 @@ dependencies {
     implementation group: 'org.jacoco', name: 'org.jacoco.report', version: jacoco_version
     //noinspection GroovyAssignabilityCheck
     fetchInstrumentationJar project(path: ':utbot-instrumentation', configuration:'instrumentationArchive')
-    testImplementation configurations.fetchInstrumentationJar
 }
 
 processResources {
+    dependsOn configurations.fetchInstrumentationJar
     from(configurations.fetchInstrumentationJar) {
         into "lib"
     }
@@ -50,12 +50,15 @@ task createProperties(dependsOn: processResources) {
     }
 }
 
+test {
+    dependsOn processResources
+}
+
 classes {
     dependsOn createProperties
 }
 
 jar {
-    dependsOn processResources
     manifest {
         attributes 'Main-Class': 'org.utbot.cli.ApplicationKt'
         attributes 'Bundle-SymbolicName': 'org.utbot.cli'
