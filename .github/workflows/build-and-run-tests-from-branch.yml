@@ -14,9 +14,6 @@ jobs:
         distribution: 'zulu'
         java-package: jdk+fx
         cache: gradle
-    - uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: 7.4.2
         
     - name: Build and run tests in UTBot Java
       run: |
@@ -54,3 +51,9 @@ jobs:
     - name: Setup tmate session
       if: ${{ always() }}
       uses: mxschmitt/action-tmate@v3
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build
