@@ -1,5 +1,7 @@
 apply from: "${parent.projectDir}/gradle/include/jvm-project.gradle"
 
+compileTestJava.dependsOn project(':utbot-instrumentation').tasks.jar
+
 //noinspection GroovyAssignabilityCheck
 configurations {
     fetchInstrumentationJar
