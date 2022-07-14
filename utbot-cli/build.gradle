@@ -2,10 +2,11 @@ apply from: "${parent.projectDir}/gradle/include/jvm-project.gradle"
 
 //noinspection GroovyAssignabilityCheck
 configurations {
-    fetchInstrumentationJar.extendsFrom implementation
+    fetchInstrumentationJar
 }
 
 compileKotlin {
+    dependsOn project(':utbot-instrumentation').tasks.jar
     kotlinOptions {
         allWarningsAsErrors = false
     }
@@ -33,7 +34,6 @@ dependencies {
 }
 
 processResources {
-    dependsOn configurations.fetchInstrumentationJar
     from(configurations.fetchInstrumentationJar) {
         into "lib"
     }
@@ -48,10 +48,6 @@ task createProperties(dependsOn: processResources) {
             properties.store w, null
         }
     }
-}
-
-test {
-    dependsOn processResources
 }
 
 classes {
