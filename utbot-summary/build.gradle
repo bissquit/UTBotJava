@@ -3,7 +3,7 @@ apply from: "${parent.projectDir}/gradle/include/jvm-project.gradle"
 dependencies {
     implementation "com.github.UnitTestBot:soot:${soot_commit_hash}"
     api project(':utbot-framework-api')
-    implementation project(':utbot-framework')
+
     implementation(project(':utbot-instrumentation'))
 
     implementation group: 'com.github.haifengl', name: 'smile-kotlin', version: '2.6.0'
@@ -12,4 +12,5 @@ dependencies {
     implementation group: 'io.github.microutils', name: 'kotlin-logging', version: kotlin_logging_version
 
     implementation group: 'com.github.javaparser', name: 'javaparser-core', version: '3.22.1'
+    testImplementation project(':utbot-framework')
 }
