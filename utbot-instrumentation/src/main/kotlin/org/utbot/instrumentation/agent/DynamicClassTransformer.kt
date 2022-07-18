@@ -27,6 +27,7 @@ class DynamicClassTransformer : ClassFileTransformer {
         try {
             UtContext.currentContext()?.stopWatch?.stop()
             val pathToClassfile = protectionDomain.codeSource?.location?.path?.asPathToFile()
+            System.err.println("USER class path: $pathsToUserClasses")
             return if (pathToClassfile in pathsToUserClasses ||
                 packsToAlwaysTransform.any(className::startsWith)
             ) {
