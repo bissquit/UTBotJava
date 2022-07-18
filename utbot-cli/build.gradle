@@ -14,6 +14,7 @@ compileKotlin {
 
 dependencies {
     api project(':utbot-framework-api')
+    implementation project(':utbot-framework')
     api project(':utbot-summary')
 
     implementation group: 'org.mockito', name: 'mockito-core', version: mockito_version
