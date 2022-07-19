@@ -1,0 +1,27 @@
+name: "Debug Java installation"
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches: [egor-vasiliev/test-self-hosted-runner]
+
+jobs:
+  debug-java:
+    runs-on: [self-hosted, home]
+    container:
+      image: ubuntu:20.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'zulu'
+          java-package: jdk+fx
+          cache: gradle
+          
+      - if: ${{ always() }}
+        run: |
+          sleep 600
