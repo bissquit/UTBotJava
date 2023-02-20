@@ -54,6 +54,7 @@ jobs:
 
     - name: Build UTBot CLI
       run: |
+        mkdir -p "${{ matrix.configuration.directory }}/build/libs/"
         echo "123" > "${{ matrix.configuration.directory }}/build/libs/${{ matrix.configuration.directory }}-${{ env.VERSION }}.jar"
 #        cd ${{ matrix.configuration.directory }}
 #        gradle build --no-daemon --build-cache --no-parallel ${{ matrix.configuration.extra_options }} -Dorg.gradle.jvmargs=-Xmx2g -Dkotlin.daemon.jvm.options=-Xmx4g -x test -PsemVer=${{ env.VERSION }}
