@@ -17,7 +17,7 @@ on:
           type: string
           description: "Upload artifacts or not"
           required: false
-          default: false
+          default: 'false'
 
   workflow_dispatch:
     inputs:

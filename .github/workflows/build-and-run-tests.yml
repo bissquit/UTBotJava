@@ -25,7 +25,7 @@ jobs:
     uses: ./.github/workflows/publish-plugin-and-cli-from-branch.yml
     with:
       minor-release: 'none'
-      upload-artifact: true
+      upload-artifact: 'true'
 #      upload-artifact: false
     secrets: inherit
 
