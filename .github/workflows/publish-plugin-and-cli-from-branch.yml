@@ -81,8 +81,8 @@ jobs:
 
       - name: debug
         run: |
-          echo ${{ github.event.inputs.upload-artifact }}
-          echo ${{ github.event.inputs.upload-artifact == 'true' }}
+          echo ${{ inputs.upload-artifact }}
+          echo ${{ inputs.upload-artifact == 'true' }}
           echo ${{ matrix.configuration.plugin_type == 'IC' }}
 
       - name: Build UTBot IntelliJ IDEA plugin
