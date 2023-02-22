@@ -17,7 +17,7 @@ on:
           type: string
           description: "Upload artifacts or not"
           required: false
-          default: 'false'
+#          default: 'false'
 
   workflow_dispatch:
     inputs:
@@ -81,6 +81,7 @@ jobs:
 
       - name: debug
         run: |
+          echo ${{ github.event.inputs.upload-artifact }}
           echo ${{ github.event.inputs.upload-artifact == 'true' }}
           echo ${{ matrix.configuration.plugin_type == 'IC' }}
 
